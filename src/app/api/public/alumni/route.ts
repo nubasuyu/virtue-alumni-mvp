@@ -17,7 +17,7 @@ export async function GET() {
         company: true,
         location: true,
         bio: true,
-        profileImageUrl: true,
+        profileImage: true,
       },
       orderBy: { createdAt: 'desc' },
     });
