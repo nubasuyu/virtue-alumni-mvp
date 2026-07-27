@@ -30,7 +30,7 @@ model AlumniProfile {
   firstName       String
   lastName        String
   phoneNumber     String?
-  profileImage    String?  // <-- Changed from profileImageUrl to match our code
+  profileImage    String?  // <-- Changed from profileImage to match our code
   
   // Professional Status
   currentJobTitle String?

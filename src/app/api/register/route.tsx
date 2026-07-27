@@ -48,7 +48,7 @@ export async function POST(request: Request) {
             company: company || null,
             location: location || null,
             bio: bio || null,
-            profileImageUrl: profileImage || null,
+            profileImage: profileImage || null,
             graduationSet: 'JSS3 2025/2026',
           },
         },
