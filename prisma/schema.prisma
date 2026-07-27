@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. The User model for Login/Auth
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  role          Role      @default(ALUMNI)
+  createdAt     DateTime  @default(now())
+  
+  // Link to the alumni profile
+  profile       AlumniProfile?
+}
+
+// 2. The Alumni Biodata (Specific to 2025/2026)
+model AlumniProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Biodata
+  firstName       String
+  lastName        String
+  phoneNumber     String?
+  profileImageUrl String?  @default("https://via.placeholder.com/150")
+  
+  // Professional Status
+  currentJobTitle String?
+  company         String?
+  location        String?
+  linkedInUrl     String?
+  
+  // Personal
+  bio             String?  @db.Text
+  maritalStatus   String?
+  
+  // Set Specific (Hardcoded for MVP)
+  graduationSet   String   @default("2025/2026")
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// 3. Roles
+enum Role {
+  SUPER_ADMIN
+  SET_ADMIN
+  ALUMNI
+}
