@@ -20,6 +20,7 @@ model User {
 }
 
 // 2. The Alumni Biodata (Specific to 2025/2026)
+// 2. The Alumni Biodata (Specific to JSS3 2025/2026)
 model AlumniProfile {
   id              String   @id @default(cuid())
   userId          String   @unique
@@ -29,7 +30,7 @@ model AlumniProfile {
   firstName       String
   lastName        String
   phoneNumber     String?
-  profileImageUrl String?  @default("https://via.placeholder.com/150")
+  profileImage    String?  // <-- Changed from profileImageUrl to match our code
   
   // Professional Status
   currentJobTitle String?
@@ -41,8 +42,8 @@ model AlumniProfile {
   bio             String?  @db.Text
   maritalStatus   String?
   
-  // Set Specific (Hardcoded for MVP)
-  graduationSet   String   @default("2025/2026")
+  // Set Specific
+  graduationSet   String   @default("JSS3 2025/2026") // <-- Updated to match our rebranding
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
