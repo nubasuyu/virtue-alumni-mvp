@@ -8,27 +8,13 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { 
-      email, 
-      password, 
-      firstName, 
-      lastName, 
-      currentJobTitle, 
-      company, 
-      location, 
-      bio,
-      profileImage 
+      email, password, firstName, lastName, currentJobTitle, company, location, bio, profileImage
     } = body;
 
     // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
-    });
-
+    const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      return NextResponse.json(
-        { error: 'An account with this email already exists' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'An account with this email already exists' }, { status: 400 });
     }
 
     // Hash password
@@ -53,29 +39,17 @@ export async function POST(request: Request) {
           },
         },
       },
-      include: {
-        profile: true,
-      },
+      include: { profile: true },
     });
 
-    return NextResponse.json({
-      message: 'Registration successful',
-      userId: user.id,
-    }, { status: 201 });
-
+    return NextResponse.json({ message: 'Registration successful', userId: user.id }, { status: 201 });
   } catch (error) {
     console.error('Registration error:', error);
     
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      return NextResponse.json(
-        { error: 'An account with this email already exists' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'An account with this email already exists' }, { status: 400 });
     }
 
-    return NextResponse.json(
-      { error: 'Registration failed. Please try again.' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Registration failed. Please try again.' }, { status: 500 });
   }
 }
