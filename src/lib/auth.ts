@@ -13,18 +13,31 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        console.log(" Login attempt for:", credentials?.email);
+
+        if (!credentials?.email || !credentials?.password) {
+          console.log("❌ Missing email or password");
+          return null;
+        }
         
         const user = await prisma.user.findUnique({
           where: { email: credentials.email }
         });
 
-        if (!user) return null;
+        if (!user) {
+          console.log(" User not found in database");
+          return null;
+        }
 
+        console.log("✅ User found. Comparing password...");
         const isValid = await bcrypt.compare(credentials.password, user.password);
-        if (!isValid) return null;
+        
+        if (!isValid) {
+          console.log("❌ Password is invalid");
+          return null;
+        }
 
-        // Return the user object with id and role so the callbacks can use them
+        console.log("🎉 Login successful for:", user.email);
         return {
           id: user.id,
           email: user.email,
@@ -34,7 +47,6 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   callbacks: {
-    // 1. Add id and role to the JWT token
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
@@ -42,7 +54,6 @@ export const authOptions: NextAuthOptions = {
       }
       return token;
     },
-    // 2. Pass the id and role from the token to the session
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;

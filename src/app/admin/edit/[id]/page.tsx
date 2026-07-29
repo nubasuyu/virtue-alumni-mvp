@@ -11,6 +11,7 @@ export default function EditAlumniPage() {
   const { data: session, status } = useSession();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [accessDenied, setAccessDenied] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -78,6 +79,26 @@ export default function EditAlumniPage() {
     }
   };
 
+  const handleResetPassword = async () => {
+    if (!confirm("⚠️ This will reset the student's password to 'Temp123!'. Continue?")) return;
+    
+    setResetting(true);
+    try {
+      const res = await fetch(`/api/alumni/${params.id}/reset-password`, { method: 'POST' });
+      const data = await res.json();
+      
+      if (res.ok) {
+        alert(`✅ Success!\n\nStudent: ${data.studentName}\nNew Temporary Password: ${data.tempPassword}\n\nPlease provide this to the student.`);
+      } else {
+        alert(`Failed: ${data.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      alert("An error occurred while resetting the password.");
+    } finally {
+      setResetting(false);
+    }
+  };
+
   if (status === 'loading' || loading) {
     return <div className="min-h-screen flex items-center justify-center bg-[#FDFBF7] text-[#6F4E37] text-xl">Loading...</div>;
   }
@@ -100,7 +121,16 @@ export default function EditAlumniPage() {
   return (
     <div className="min-h-screen bg-[#FDFBF7] py-12 px-4">
       <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-xl border-2 border-[#6F4E37]/20">
-        <h1 className="text-3xl font-extrabold text-[#6F4E37] mb-6 border-b pb-4">Edit Profile</h1>
+        <div className="flex justify-between items-center mb-6 border-b pb-4">
+          <h1 className="text-3xl font-extrabold text-[#6F4E37]">Edit Profile</h1>
+          <button 
+            onClick={handleResetPassword}
+            disabled={resetting}
+            className="bg-amber-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-amber-700 transition-colors text-sm disabled:bg-gray-400"
+          >
+            {resetting ? 'Resetting...' : '🔑 Reset Password'}
+          </button>
+        </div>
         
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
