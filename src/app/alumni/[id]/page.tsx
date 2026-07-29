@@ -2,9 +2,16 @@
 import { prisma } from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import AdminProfileActions from '@/components/AdminProfileActions';
 
 export default async function AlumniProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+
+  // Check if the current viewer is an Admin
+  const session = await getServerSession(authOptions);
+  const isAdmin = session?.user?.role === 'SUPER_ADMIN';
 
   const profile = await prisma.alumniProfile.findUnique({
     where: { id },
@@ -94,6 +101,10 @@ export default async function AlumniProfilePage({ params }: { params: Promise<{ 
             </div>
           </div>
         </div>
+
+        {/* Admin Only Actions: Only renders if you are logged in as SUPER_ADMIN */}
+        {isAdmin && <AdminProfileActions profileId={id} />}
+
       </div>
     </div>
   );
