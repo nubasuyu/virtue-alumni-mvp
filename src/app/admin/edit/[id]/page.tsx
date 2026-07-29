@@ -11,6 +11,7 @@ export default function EditAlumniPage() {
   const { data: session, status } = useSession();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
   
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', currentJobTitle: '', company: '',
@@ -21,27 +22,33 @@ export default function EditAlumniPage() {
     if (status === 'unauthenticated') {
       router.push('/login');
     } else if (status === 'authenticated' && params.id) {
-      // Fetch the current data to pre-fill the form
       fetch(`/api/alumni/${params.id}`)
         .then(res => {
+          if (res.status === 401) {
+            setAccessDenied(true);
+            setLoading(false);
+            return null;
+          }
           if (!res.ok) throw new Error('Failed to fetch');
           return res.json();
         })
         .then(data => {
-          setFormData({
-            firstName: data.firstName || '',
-            lastName: data.lastName || '',
-            currentJobTitle: data.currentJobTitle || '',
-            company: data.company || '',
-            location: data.location || '',
-            bio: data.bio || '',
-            profileImage: data.profileImage || ''
-          });
+          if (data) {
+            setFormData({
+              firstName: data.firstName || '',
+              lastName: data.lastName || '',
+              currentJobTitle: data.currentJobTitle || '',
+              company: data.company || '',
+              location: data.location || '',
+              bio: data.bio || '',
+              profileImage: data.profileImage || ''
+            });
+          }
           setLoading(false);
         })
         .catch(err => {
           console.error(err);
-          alert("Could not load profile data.");
+          setAccessDenied(true);
           setLoading(false);
         });
     }
@@ -61,7 +68,8 @@ export default function EditAlumniPage() {
         alert("Profile updated successfully!");
         router.push(`/alumni/${params.id}`);
       } else {
-        alert("Failed to update profile.");
+        const errData = await res.json();
+        alert(`Failed to update: ${errData.error || 'Unknown error'}`);
       }
     } catch (error) {
       alert("An error occurred.");
@@ -70,8 +78,21 @@ export default function EditAlumniPage() {
     }
   };
 
-  if (status === 'loading' || loading) return <div className="min-h-screen flex items-center justify-center bg-[#FDFBF7] text-[#6F4E37] text-xl">Loading profile data...</div>;
-  if (session?.user?.role !== 'SUPER_ADMIN') return <div className="min-h-screen flex items-center justify-center bg-[#FDFBF7] text-red-600 text-xl font-bold">Access Denied</div>;
+  if (status === 'loading' || loading) {
+    return <div className="min-h-screen flex items-center justify-center bg-[#FDFBF7] text-[#6F4E37] text-xl">Loading...</div>;
+  }
+
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#FDFBF7] text-red-600">
+        <h1 className="text-3xl font-bold mb-4">Access Denied</h1>
+        <p className="text-gray-600 mb-6">You do not have permission to edit this profile.</p>
+        <button onClick={() => router.back()} className="bg-[#6F4E37] text-white px-6 py-2 rounded-lg font-bold hover:bg-[#5a3e2b]">
+          Go Back
+        </button>
+      </div>
+    );
+  }
 
   const inputClass = "w-full border-2 border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-[#6F4E37] focus:border-[#6F4E37] text-lg bg-white";
   const labelClass = "block text-sm font-bold text-[#6F4E37] mb-1 uppercase tracking-wide";
@@ -79,7 +100,7 @@ export default function EditAlumniPage() {
   return (
     <div className="min-h-screen bg-[#FDFBF7] py-12 px-4">
       <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-xl border-2 border-[#6F4E37]/20">
-        <h1 className="text-3xl font-extrabold text-[#6F4E37] mb-6 border-b pb-4">Edit Alumni Profile</h1>
+        <h1 className="text-3xl font-extrabold text-[#6F4E37] mb-6 border-b pb-4">Edit Profile</h1>
         
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

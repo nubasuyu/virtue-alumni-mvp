@@ -1,8 +1,8 @@
 // src/lib/auth.ts
-import { NextAuthOptions } from "next-auth";
+import { prisma } from "@/lib/prisma";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
+import { NextAuthOptions } from "next-auth";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -13,29 +13,18 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Missing email or password");
-        }
-
-        // 1. Find the user in the database
+        if (!credentials?.email || !credentials?.password) return null;
+        
         const user = await prisma.user.findUnique({
           where: { email: credentials.email }
         });
 
-        if (!user) {
-          throw new Error("No user found with this email");
-        }
+        if (!user) return null;
 
-        // 2. Check the password
-        // (We check both hashed passwords AND plain text just for your initial admin test)
-        const isPasswordValid = await bcrypt.compare(credentials.password, user.password).catch(() => false);
-        const isPlainTextValid = credentials.password === user.password;
+        const isValid = await bcrypt.compare(credentials.password, user.password);
+        if (!isValid) return null;
 
-        if (!isPasswordValid && !isPlainTextValid) {
-          throw new Error("Invalid password");
-        }
-
-        // 3. Return user data (This gets saved in the secure session cookie)
+        // Return the user object with id and role so the callbacks can use them
         return {
           id: user.id,
           email: user.email,
@@ -45,28 +34,28 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   callbacks: {
-    // Attach the user's Role to the session token
+    // 1. Add id and role to the JWT token
     async jwt({ token, user }) {
       if (user) {
-        token.role = user.role;
         token.id = user.id;
+        token.role = user.role;
       }
       return token;
     },
-    // Attach the Role to the frontend session
+    // 2. Pass the id and role from the token to the session
     async session({ session, token }) {
       if (session.user) {
-        session.user.role = token.role as string;
         session.user.id = token.id as string;
+        session.user.role = token.role as string;
       }
       return session;
     }
   },
   pages: {
-    signIn: '/login', // Redirect to our custom login page
+    signIn: "/login",
   },
   session: {
-    strategy: "jwt"
+    strategy: "jwt",
   },
   secret: process.env.NEXTAUTH_SECRET,
 };

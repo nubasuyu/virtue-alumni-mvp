@@ -4,45 +4,54 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
-// 1. GET: Fetch a single profile (Used to pre-fill the Edit form)
+// Helper to check permissions
+async function checkPermissions(id: string, session: any) {
+  if (!session) return { allowed: false, profile: null };
+  
+  const isAdmin = session.user.role === 'SUPER_ADMIN';
+  
+  const profile = await prisma.alumniProfile.findUnique({
+    where: { id },
+    select: { userId: true }
+  });
+
+  if (!profile) return { allowed: false, profile: null };
+
+  // Allow if Admin OR if the logged-in user owns this profile
+  const isOwner = session.user.id === profile.userId;
+  const allowed = isAdmin || isOwner;
+
+  return { allowed, profile, isAdmin };
+}
+
+// 1. GET: Fetch a single profile
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== 'SUPER_ADMIN') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   const { id } = await params;
+  const { allowed, profile } = await checkPermissions(id, session);
 
-  try {
-    const profile = await prisma.alumniProfile.findUnique({
-      where: { id },
-    });
+  if (!allowed) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
 
-    if (!profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-    }
-
-    return NextResponse.json(profile);
-  } catch (error) {
-    console.error("GET API CRASH:", error);
-    return NextResponse.json({ error: 'Failed to fetch profile' }, { status: 500 });
-  }
+  // Return full profile data for the edit form
+  const fullProfile = await prisma.alumniProfile.findUnique({ where: { id } });
+  return NextResponse.json(fullProfile);
 }
 
-// 2. PUT: Update the profile (Used when you click "Save Changes")
+// 2. PUT: Update the profile
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== 'SUPER_ADMIN') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   const { id } = await params;
+  const { allowed, isAdmin } = await checkPermissions(id, session);
+
+  if (!allowed) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   const body = await request.json();
 
   try {
@@ -58,7 +67,6 @@ export async function PUT(
         profileImage: body.profileImage || null,
       }
     });
-    
     return NextResponse.json({ message: 'Updated successfully' });
   } catch (error) {
     console.error("PUT API CRASH:", error);
@@ -66,32 +74,23 @@ export async function PUT(
   }
 }
 
-// 3. DELETE: Remove the profile
+// 3. DELETE: Only Admins can delete
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
+  const { id } = await params;
+  
   if (!session || session.user.role !== 'SUPER_ADMIN') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { id } = await params;
-
   try {
-    const profile = await prisma.alumniProfile.findUnique({
-      where: { id },
-      select: { userId: true }
-    });
+    const profile = await prisma.alumniProfile.findUnique({ where: { id }, select: { userId: true } });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
 
-    if (!profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-    }
-
-    await prisma.user.delete({
-      where: { id: profile.userId }
-    });
-
+    await prisma.user.delete({ where: { id: profile.userId } });
     return NextResponse.json({ message: 'Deleted successfully' });
   } catch (error) {
     console.error("DELETE API CRASH:", error);
